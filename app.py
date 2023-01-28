@@ -5,6 +5,47 @@ import sqlite3
 
 
 
+class Database:
+    def ConnectToDatabase():
+        try:
+            db = sqlite3.connect('todo.db')
+            c = db.cursor()
+            c.execute(
+                "CREATE TABLE if not exists tasks"
+                "(id INTEGER PRIMARY kEY, "
+                "Task VARCHAR(255) NOT NULL, "
+                "Date VARCHAR(255) NOT NULL)"
+            )
+            return db
+        except Exception as e:
+            print(e)
+
+    def ReadDatabase(db):
+        # db = sqlite3.connect('todo.db')
+        c = db.cursor()
+        c.execute("SELECT Task, Date FROM tasks")
+        records = c.fetchall()
+        return records
+
+    def InsertDatabase(db, values):
+        # db = sqlite3.connect('todo.db')
+        c = db.cursor()
+        c.execute("INSERT INTO tasks (Task, Date) VALUES (?, ?)", values)
+        db.commit()
+
+    def DeleteDatabase(db, value):
+        # db = sqlite3.connect('todo.db')
+        c = db.cursor()
+        c.execute("DELETE FROM tasks WHERE Task=?", value)
+        db.commit()
+
+    def UpdateDatabase(db, value):
+        # db = sqlite3.connect('todo.db')
+        c = db.cursor()
+        c.execute("UPDATE tasks SET Task=? WHERE Task=?", value)
+        db.commit()
+
+
 class FormContainer(UserControl):
     def __init__(self, func):
         self.func = func
@@ -51,12 +92,14 @@ class FormContainer(UserControl):
             )
 
 class CreateTask(UserControl):
-    def __init__(self, task:str, date:str):
+    def __init__(self, task:str, date:str, func1, func2):
         self.task = task
         self.date = date
+        self.func1 = func1
+        self.func2 = func2
         super().__init__()
 
-    def TaskDeleteEdit(self, name, color):
+    def TaskDeleteEdit(self, name, color, func):
         return IconButton(
             icon=name,
             width=30,
@@ -64,7 +107,7 @@ class CreateTask(UserControl):
             icon_color=color,
             opacity=0,
             animate_opacity=200,
-            on_click=None
+            on_click=lambda e: func(self.GetContainerInstance())
         )
 
     def ShowIcons(self, e):
@@ -80,6 +123,9 @@ class CreateTask(UserControl):
                 0, 0
             )
             e.control.content.update()
+
+    def GetContainerInstance(self):
+        return self
 
     def build(self):
         return Container(
@@ -105,8 +151,8 @@ class CreateTask(UserControl):
                         spacing=0,
                         alignment=MainAxisAlignment.CENTER,
                         controls=[
-                            self.TaskDeleteEdit(icons.DELETE_ROUNDED, "red500"),
-                            self.TaskDeleteEdit(icons.EDIT_ROUNDED, "whtie70")
+                            self.TaskDeleteEdit(icons.DELETE_ROUNDED, "red500", self.func1),
+                            self.TaskDeleteEdit(icons.EDIT_ROUNDED, "whtie70", self.func2)
                         ]
 
                     )
@@ -120,16 +166,62 @@ def main(page: Page):
 
     def AddtaskToScreen(e):
         dateTime = datetime.now().strftime("%b %d, %Y  %I:%M")
+
+        db = Database.ConnectToDatabase()
+        Database.InsertDatabase(db, (form.content.controls[0].value, dateTime))
+        db.close()
+
         if form.content.controls[0].value:
             _main_column_.controls.append(
                 CreateTask(
                     form.content.controls[0].value,
                     dateTime,
+                    DeleteFunction,
+                    UpdateFunction,
                 )
             )
             _main_column_.update()
 
             CreateToDoTask(e)
+
+        else:
+            db.close()
+            pass
+
+    def DeleteFunction(e):
+        db = Database.ConnectToDatabase()
+        Database.DeleteDatabase(
+            db, (e.controls[0].content.controls[0].controls[0].value,)  # this is tuple
+        )
+        db.close()
+        _main_column_.controls.remove(e)
+        _main_column_.update()
+        pass
+
+    def UpdateFunction(e):
+        form.height, form.opacity = 200, 1
+        (
+            form.content.controls[0].value,
+            form.content.controls[1].content.value,
+            form.content.controls[1].on_click
+        ) = (
+            e.controls[0].content.controls[0].controls[0].value,
+            'Update',
+            lambda _: FinalizeUpdate(e),
+        )
+        form.update()
+
+    def FinalizeUpdate(e):
+        db = Database.ConnectToDatabase()
+        Database.UpdateDatabase(
+            db, (
+                form.content.controls[0].value,
+                e.controls[0].content.controls[0].controls[0].value,
+            ),
+        )
+        e.controls[0].content.controls[0].controls[0].value = form.content.controls[0].value
+        e.controls[0].content.update()
+        CreateToDoTask(e)
 
     def CreateToDoTask(e):
         if form.height != 200:
@@ -137,9 +229,10 @@ def main(page: Page):
             form.update()
         else:
             form.height, form.opacity = 80, 0
+            form.content.controls[0].value = None
+            form.content.controls[1].content.value = "Add Text"
+            form.content.controls[1].on_click = lambda e: AddtaskToScreen(e)
             form.update()
-
-        pass
 
     _main_column_ = Column(
         scroll='hidden',
@@ -195,6 +288,18 @@ def main(page: Page):
     )
     page.update()
     form = page.controls[0].content.controls[0].content.controls[1].controls[0]
+
+    db = Database.ConnectToDatabase()
+    for task in Database.ReadDatabase(db)[::-1]:
+        _main_column_.controls.append(
+            CreateTask(
+                task[0],
+                task[1],
+                DeleteFunction,
+                UpdateFunction
+            )
+        )
+    _main_column_.update()
 
 if __name__== "__main__":
     flet.app(target=main)
