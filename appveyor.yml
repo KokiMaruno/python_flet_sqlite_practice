@@ -12,7 +12,7 @@ environment:
     secure: Ti46nPnZgFh0nRteU6ma0EhJnCTW7PaMn9hnnewZl4gBFPyRQnXNCwGog02+MRLX
 
 install:
-- pip install -r requirements.txt
+- pip install -r pyproject.toml
 
 build_script:
 - flet pack main.py --name counter --icon icon.png --product-name counter --product-version "1.2.3" --copyright "Copyright (c) 2022 YourCompany Inc."
