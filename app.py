@@ -302,5 +302,7 @@ def main(page: Page):
     _main_column_.update()
 
 if __name__== "__main__":
-    flet.app(target=main)
+    flet.app(target=main,
+             # view=flet.WEB_BROWSER
+             )
 
