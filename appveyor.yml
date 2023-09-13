@@ -14,6 +14,8 @@ environment:
 install:
 - pip install poetry
 - poetry install
+- poetry shell
+- pip install pyinstaller
 
 build_script:
 - flet pack main.py --name counter --icon icon.png --product-name counter --product-version "1.2.3" --copyright "Copyright (c) 2022 YourCompany Inc."
