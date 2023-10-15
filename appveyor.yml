@@ -12,6 +12,7 @@ environment:
     secure: Ti46nPnZgFh0nRteU6ma0EhJnCTW7PaMn9hnnewZl4gBFPyRQnXNCwGog02+MRLX
 
 install:
+- python -m pip install poetry
 - python -m pip install -r ./pyproject.toml
 
 build_script:
